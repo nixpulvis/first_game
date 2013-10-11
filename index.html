@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>First Game</title>
+</head>
+<body>
+<h1>HI</h1>
+
+<!-- THIS IS WHERE YOU WRITE THINGS. -->
+
+<canvas id="game" width="500" height="500" style="border: 1px solid #333;"></canvas>
+
+<!-- THIS IS WHERE SCRIPTS GO! -->
+<script src="/socket.io/socket.io.js"></script>
+<script type="text/javascript">
+
+var socket = io.connect('http://10.0.0.7:1337');
+
+var id;
+var players;
+
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+
+function update() {
+  ctx.clearRect (0, 0, canvas.width, canvas.height);
+  for (var i = 0; i < players.length; i++) {
+    var player = players[i];
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(player.x, player.y, 32, 32);
+  }
+}
+
+socket.on('registration', function (data) {
+  id = data.id;
+  console.log(id);
+});
+
+socket.on('update', function (data) {
+  players = data.players;
+  update();
+});
+
+addEventListener('keydown', function (e) {
+  var data = {}
+  data[e.keyCode] = true;
+  socket.emit('keyEvent', data);
+});
+
+addEventListener('keyup', function (e) {
+  var data = {}
+  data[e.keyCode] = false;
+  socket.emit('keyEvent', data);
+});
+
+
+</script>
+
+</body>
+</html>
