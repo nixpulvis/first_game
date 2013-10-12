@@ -62,6 +62,11 @@ function Player (id) {
 
   this.speed = 5;
 
+  this.color = "rgb("+
+    Math.floor(Math.random()*255)+","+
+    Math.floor(Math.random()*255)+","+
+    Math.floor(Math.random()*255)+")";
+
   // Keys currently down by this player
   this.keys = {};
 
@@ -124,6 +129,15 @@ io.sockets.on('connection', function (socket) {
         player.keys[keyCode] = true;
       } else {
         delete player.keys[keyCode];
+      }
+    }
+  });
+
+  socket.on('changeColor', function (data) {
+    for(var i = 0; i < players.length; i++) {
+      if(players[i].id == socket.id) {
+        players[i].color = data;
+        break;
       }
     }
   });

@@ -3,12 +3,22 @@
 <head>
   <title>First Game</title>
 </head>
-<body>
-<h1>HI</h1>
+<body bgcolor="EEEEEE">
 
 <!-- THIS IS WHERE YOU WRITE THINGS. -->
+<center>
+  <h1>Boxez</h1>
+  Arrow Keys to move!<br>
 
-<canvas id="game" width="500" height="500" style="border: 1px solid #333;"></canvas>
+  <canvas id="game" width="500" height="500" style="border: 1px solid #333;"></canvas>
+  <br>Change Color<br>
+  <form name="ColorChanger" action="" method="GET">
+    R: <input name="r" type="text" value="" size="3" maxlength="3">
+    G: <input name="g" type="text" value="" size="3" maxlength="3">
+    B: <input name="b" type="text" value="" size="3" maxlength="3">
+    <input name="submit" type="button" value="New Color" onClick="changeColor(this.form)">
+  </form>
+</center>
 
 <!-- THIS IS WHERE SCRIPTS GO! -->
 <script src="/socket.io/socket.io.js"></script>
@@ -24,22 +34,62 @@ var cookie;
 var canvas = document.getElementById('game');
 var ctx = canvas.getContext('2d');
 
+function changeColor(form) {
+  var newColor = "rgb("+
+    form.r.value+","+
+    form.g.value+","+ 
+    form.b.value+")";
+  socket.emit('changeColor', newColor);
+}
+
 function update() {
-  ctx.clearRect (0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "DDDDDD";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (var i = 0; i < players.length; i++) {
     var player = players[i];
 
-    if(id == player.id) ctx.fillStyle = "red";
-    else ctx.fillStyle = "black";
+    ctx.fillStyle = "black";
+    ctx.fillRect(player.x-1, player.y-1, 34, 34);
+    ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, 32, 32);
 
     ctx.fillStyle = "blue";
     ctx.font = "16px Arial";
-    ctx.fillText(player.score, player.x, player.y);
+    ctx.fillText(player.score, player.x, player.y-2);
   }
 
-  ctx.fillStyle = "green";
-  if(typeof(cookie) != "undefined") ctx.fillRect(cookie.x, cookie.y, 32, 32);
+ 
+  if(typeof(cookie) != "undefined") {
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(cookie.x+16, cookie.y+16, 17, 0, Math.PI*2, true); 
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(cookie.x+16, cookie.y+16, 16, 0, Math.PI*2, true); 
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(cookie.x+16, cookie.y+16, 12, 0, Math.PI*2, true); 
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(cookie.x+16, cookie.y+16, 8, 0, Math.PI*2, true); 
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(cookie.x+16, cookie.y+16, 4, 0, Math.PI*2, true); 
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
 socket.on('registration', function (data) {
@@ -53,7 +103,6 @@ socket.on('update', function (data) {
 
 socket.on('cookie', function (data) {
   cookie = data.cookie;
-  console.log(data.cookie);
 });
 
 addEventListener('keydown', function (e) {
