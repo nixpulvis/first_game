@@ -14,10 +14,12 @@
 <script src="/socket.io/socket.io.js"></script>
 <script type="text/javascript">
 
-var socket = io.connect('http://10.0.0.7:1337');
+var socket = io.connect('http://10.0.0.2:1337');
 
 var id;
 var players;
+
+var cookie;
 
 var canvas = document.getElementById('game');
 var ctx = canvas.getContext('2d');
@@ -27,19 +29,31 @@ function update() {
   for (var i = 0; i < players.length; i++) {
     var player = players[i];
 
-    ctx.fillStyle = "red";
+    if(id == player.id) ctx.fillStyle = "red";
+    else ctx.fillStyle = "black";
     ctx.fillRect(player.x, player.y, 32, 32);
+
+    ctx.fillStyle = "blue";
+    ctx.font = "16px Arial";
+    ctx.fillText(player.score, player.x, player.y);
   }
+
+  ctx.fillStyle = "green";
+  if(typeof(cookie) != "undefined") ctx.fillRect(cookie.x, cookie.y, 32, 32);
 }
 
 socket.on('registration', function (data) {
   id = data.id;
-  console.log(id);
 });
 
 socket.on('update', function (data) {
   players = data.players;
   update();
+});
+
+socket.on('cookie', function (data) {
+  cookie = data.cookie;
+  console.log(data.cookie);
 });
 
 addEventListener('keydown', function (e) {
