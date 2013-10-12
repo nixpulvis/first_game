@@ -5,7 +5,6 @@
 </head>
 <body bgcolor="EEEEEE">
 
-<!-- THIS IS WHERE YOU WRITE THINGS. -->
 <center>
   <h1>Boxez</h1>
   Arrow Keys to move!<br>
@@ -24,16 +23,18 @@
 <script src="/socket.io/socket.io.js"></script>
 <script type="text/javascript">
 
+// Initialize socket, id, array of players, and cookie
 var socket = io.connect('http://10.0.0.2:1337');
 
 var id;
 var players;
-
 var cookie;
 
+// Initialize canvas
 var canvas = document.getElementById('game');
 var ctx = canvas.getContext('2d');
 
+// Sends new color request from form ColorChanger
 function changeColor(form) {
   var newColor = "rgb("+
     form.r.value+","+
@@ -42,9 +43,16 @@ function changeColor(form) {
   socket.emit('changeColor', newColor);
 }
 
-function update() {
+// Draw to canvas
+function draw() {
+  // Fill background
   ctx.fillStyle = "DDDDDD";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // If players is still undefined, don't draw
+  if(typeof(players) == "undefined") return;
+  
+  // For every player, draw them and their score
   for (var i = 0; i < players.length; i++) {
     var player = players[i];
 
@@ -58,7 +66,7 @@ function update() {
     ctx.fillText(player.score, player.x, player.y-2);
   }
 
- 
+  // If cookie is not undefined, draw the cookie!
   if(typeof(cookie) != "undefined") {
     ctx.fillStyle = "black";
     ctx.beginPath();
@@ -92,31 +100,39 @@ function update() {
   }
 }
 
+// On registration, set id
 socket.on('registration', function (data) {
   id = data.id;
 });
 
+// On update, update players
 socket.on('update', function (data) {
   players = data.players;
-  update();
 });
 
+// On cookie, set new cookie
 socket.on('cookie', function (data) {
   cookie = data.cookie;
 });
 
+// Listen for keydown events and send key to server as down
 addEventListener('keydown', function (e) {
   var data = {}
   data[e.keyCode] = true;
   socket.emit('keyEvent', data);
 });
 
+// Listen for keyup events and send key to server as up
 addEventListener('keyup', function (e) {
   var data = {}
   data[e.keyCode] = false;
   socket.emit('keyEvent', data);
 });
 
+// draw as often as possible
+setInterval(function () {
+  draw();
+}, 1)
 
 </script>
 
