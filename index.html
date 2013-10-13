@@ -19,16 +19,26 @@
   </form>
 </center>
 
+
 <!-- THIS IS WHERE SCRIPTS GO! -->
 <script src="/socket.io/socket.io.js"></script>
 <script type="text/javascript">
 
 // Initialize socket, id, array of players, and cookie
-var socket = io.connect('http://10.0.0.2:1337');
+var socket = io.connect('http://localhost:1337');
 
-var id;
-var players;
-var cookie;
+var id,
+ players,
+ cookies,
+ bullets;
+
+function getMousePos(canvas, event) {
+  var rect = canvas.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+}
 
 // Initialize canvas
 var canvas = document.getElementById('game');
@@ -38,7 +48,7 @@ var ctx = canvas.getContext('2d');
 function changeColor(form) {
   var newColor = "rgb("+
     form.r.value+","+
-    form.g.value+","+ 
+    form.g.value+","+
     form.b.value+")";
   socket.emit('changeColor', newColor);
 }
@@ -48,10 +58,10 @@ function draw() {
   // Fill background
   ctx.fillStyle = "DDDDDD";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
+
   // If players is still undefined, don't draw
   if(typeof(players) == "undefined") return;
-  
+
   // For every player, draw them and their score
   for (var i = 0; i < players.length; i++) {
     var player = players[i];
@@ -64,40 +74,48 @@ function draw() {
     ctx.fillStyle = "blue";
     ctx.font = "16px Arial";
     ctx.fillText(player.score, player.x, player.y-2);
-  }
+  };
+
+  for (var i = 0; i < bullets.length; i++) {
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(bullets[i].x, bullets[i].y, 2, 0, Math.PI*2, true);
+    ctx.closePath();
+    ctx.fill();
+  };
 
   // If cookie is not undefined, draw the cookie!
-  if(typeof(cookie) != "undefined") {
+  for (var i = 0; i < cookies.length; i++) {
     ctx.fillStyle = "black";
     ctx.beginPath();
-    ctx.arc(cookie.x+16, cookie.y+16, 17, 0, Math.PI*2, true); 
+    ctx.arc(cookies[i].x+16, cookies[i].y+16, 17, 0, Math.PI*2, true);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = "white";
     ctx.beginPath();
-    ctx.arc(cookie.x+16, cookie.y+16, 16, 0, Math.PI*2, true); 
+    ctx.arc(cookies[i].x+16, cookies[i].y+16, 16, 0, Math.PI*2, true);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = "black";
     ctx.beginPath();
-    ctx.arc(cookie.x+16, cookie.y+16, 12, 0, Math.PI*2, true); 
+    ctx.arc(cookies[i].x+16, cookies[i].y+16, 12, 0, Math.PI*2, true);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = "white";
     ctx.beginPath();
-    ctx.arc(cookie.x+16, cookie.y+16, 8, 0, Math.PI*2, true); 
+    ctx.arc(cookies[i].x+16, cookies[i].y+16, 8, 0, Math.PI*2, true);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = "black";
     ctx.beginPath();
-    ctx.arc(cookie.x+16, cookie.y+16, 4, 0, Math.PI*2, true); 
+    ctx.arc(cookies[i].x+16, cookies[i].y+16, 4, 0, Math.PI*2, true);
     ctx.closePath();
     ctx.fill();
-  }
+  };
 }
 
 // On registration, set id
@@ -108,11 +126,8 @@ socket.on('registration', function (data) {
 // On update, update players
 socket.on('update', function (data) {
   players = data.players;
-});
-
-// On cookie, set new cookie
-socket.on('cookie', function (data) {
-  cookie = data.cookie;
+  cookies = data.cookies;
+  bullets = data.bullets;
 });
 
 // Listen for keydown events and send key to server as down
@@ -128,6 +143,11 @@ addEventListener('keyup', function (e) {
   data[e.keyCode] = false;
   socket.emit('keyEvent', data);
 });
+
+canvas.addEventListener('click', function (e) {
+  var mousePos = getMousePos(canvas, e);
+  socket.emit('mouseEvent', mousePos);
+})
 
 // draw as often as possible
 setInterval(function () {

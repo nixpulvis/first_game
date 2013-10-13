@@ -7,7 +7,7 @@ var app = require('http').createServer(handler),
 
 io.set('log level', 1);
 
-app.listen(port, '10.0.0.2');
+app.listen(port, 'localhost');
 
 function handler(req, res) {
   fs.readFile(__dirname + '/index.html',
@@ -28,14 +28,15 @@ var updateRate = 25;
 // Array of Players connected to server
 var players = [];
 
-// True if a new cookie was spawned this tick, false otherwise.
-// Determines whether or not to send a new cookie packet to players
-// This avoids spamming cookie packets when the position doesn't change
-var newCookie = false;
+// Array of all the Bullets in the game.
+var bullets = [];
+
+// Array of all the Cookies in the game.
+var cookies = [];
 
 // a Cookie is an object with:
 // x (Number), y (Number)
-function Cookie () {
+function Cookie() {
   this.x = 0;
   this.y = 0;
 
@@ -53,20 +54,36 @@ function Cookie () {
     }
   }
 
-  // Bounding box collision with player
-  this.collide = function(player) {
-    return (this.x <= player.x+32 && this.x+32 >= player.x &&
-      this.y <= player.y+32 && this.y+32 >= player.y);
+  // Bounding box collision with an object.
+  this.collide = function(object) {
+    return (this.x <= object.x+32 && this.x+32 >= object.x &&
+      this.y <= object.y+32 && this.y+32 >= object.y);
   }
 }
 
-// Initialize cookie for game
-var cookie = new Cookie();
-cookie.spawn();
+// a Bullet is an object with:
+// - x (Number) The x coordinate of the bullet's position.
+// - y (Number) The y coordinate of the bullet's position.
+// - dx (Number) The velocity upon the x axis.
+// - dy (Number) The velocity upon the y axis.
+// - life (Number) The number of milliseconds this bullet will be active for.
+// - playerId (Unique String) The player's id that fired the bullet.
+function Bullet (player, aim) {
+  this.x    = player.x;
+  this.y    = player.y;
+  this.dx   = Math.cos(aim.y/aim.x);  // I know this doesn't work, but I'm
+  this.dy   = Math.sin(aim.y/aim.x);  // too tired to get it working right now.
+  this.life = 1000;
+  this.id   = player.id;
+}
 
 // a Player is an object with:
-// - x (Number), y (Number), id (Unique String),
-// - keys (Array of Number), score (Number), speed (Number)
+// - x (Number)
+// - y (Number)
+// - id (Unique String)
+// - keys (Array of Number)
+// - score (Number)
+// - speed (Number)
 // - color (String, form:"rgb(r,g,b)" with r,g,b being Number)
 function Player (id) {
   this.id = id;
@@ -118,13 +135,33 @@ function update() {
     players[i].move();
   }
 
+  for(var i = 0; i < bullets.length; i++){
+    bullets[i].x += bullets[i].dx;
+    bullets[i].y += bullets[i].dy;
+  }
+
   for(var i = 0; i < players.length; i++){
-    if(cookie.collide(players[i])) {
-      players[i].score++;
-      cookie.spawn();
-      newCookie = true;
-      break;
+    for(var k = 0; k < cookies.length; k++){
+      if(cookies[k].collide(players[i])) {
+        players[i].score++;
+        cookies.splice(k, 1);
+      }
     }
+  }
+
+  for(var i = 0; i < bullets.length; i++){
+    for(var k = 0; k < cookies.length; k++){
+      if(cookies[k].collide(bullets[i])) {
+        // bullets[i].player.score++;
+        cookies.splice(k, 1);
+      }
+    }
+  }
+
+  if (cookies.length == 0) {
+    var cookie = new Cookie();
+    cookie.spawn();
+    cookies.push(cookie);
   }
 }
 
@@ -137,9 +174,8 @@ io.sockets.on('connection', function (socket) {
   var player = new Player(socket.id);
   players.push(player);
 
-  // Emit the player's ID and cookie location
+  // Emit the player's ID
   socket.emit('registration', {id : player.id});
-  socket.emit('cookie', {cookie : cookie});
 
   // If key pressed down, add to player's keys array, otherwise remove it
   socket.on('keyEvent', function (data) {
@@ -150,6 +186,12 @@ io.sockets.on('connection', function (socket) {
         delete player.keys[keyCode];
       }
     }
+  });
+
+  //
+  socket.on('mouseEvent', function (data) {
+    var bullet = new Bullet(player, data);
+    bullets.push(bullet);
   });
 
   // Request to change color, set player's color to given color
@@ -180,14 +222,14 @@ setInterval(function() {
   // Update game
   update();
 
-  // If we have a new cookie, emit information to everyone
-  if(newCookie) {
-    io.sockets.emit('cookie', {cookie : cookie});
-    newCookie = false;
-  }
+  // all of the game data to everyone.
+  var data = {
+    players : players,
+    bullets : bullets,
+    cookies : cookies,
+  };
 
-  // Send array of player to everyone
-  io.sockets.emit('update', {players : players});
+  io.sockets.emit('update', data);
 }, updateRate);
 
 
